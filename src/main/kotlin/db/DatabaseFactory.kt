@@ -3,7 +3,7 @@ package com.example.db
 import org.jetbrains.exposed.sql.Database
 
 fun connectToDatabase() {
-    val jdbcUrl = "jdbc:postgresql://localhost:5435/vetapp"
+    val jdbcUrl = "jdbc:postgresql://localhost:5432/vetapp"
     val driver = "org.postgresql.Driver"
     val user = "postgres"
     val password = "example"
