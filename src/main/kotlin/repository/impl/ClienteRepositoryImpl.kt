@@ -1,6 +1,7 @@
 package com.example.repository.impl
 
 import com.example.db.Clientes
+import com.example.db.Usuarios
 import com.example.domain.repository.ClienteRepository
 import com.example.dto.ClienteDTO
 import com.example.dto.ClienteCreateUpdateDTO
@@ -11,13 +12,19 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 class ClienteRepositoryImpl : ClienteRepository {
     override fun findAll(): List<ClienteDTO> = transaction {
-        Clientes.selectAll().map { it.toClienteDTO() }
+        (Clientes innerJoin Usuarios).selectAll().map {
+            val nombreUsuario = it[Usuarios.nombre]
+            it.toClienteDTO(nombreUsuario)
+        }
     }
 
     override fun findById(id: String): ClienteDTO? = transaction {
         val intId = id.toIntOrNull() ?: return@transaction null
-        Clientes.select { Clientes.id eq intId }
-            .map { it.toClienteDTO() }
+        (Clientes innerJoin Usuarios).select { Clientes.id eq intId }
+            .map {
+                val nombreUsuario = it[Usuarios.nombre]
+                it.toClienteDTO(nombreUsuario)
+            }
             .singleOrNull()
     }
 
