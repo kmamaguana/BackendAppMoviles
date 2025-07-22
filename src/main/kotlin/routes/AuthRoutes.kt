@@ -1,6 +1,6 @@
 package com.example.routes
 
-import com.example.dto.UsuarioCreateUpdateDTO
+import com.example.dto.auth.RegisterRequestDTO
 import com.example.dto.auth.LoginRequestDTO
 import com.example.dto.auth.LoginResponseDTO
 import com.example.services.AuthService
@@ -16,7 +16,8 @@ fun Route.authRoutes(authService: AuthService) {
 
         // POST /auth/register → Registro de nuevo usuario
         post("/register") {
-            val dto = call.receive<UsuarioCreateUpdateDTO>()
+            println("Llego al endpoint de registro")
+            val dto = call.receive<RegisterRequestDTO>()
             val usuarioCreado = authService.register(dto)
             call.respond(HttpStatusCode.Created, usuarioCreado)
         }

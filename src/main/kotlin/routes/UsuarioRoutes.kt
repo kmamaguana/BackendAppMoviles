@@ -30,7 +30,8 @@ fun Route.usuarioRoutes(authService: AuthService, usuarioService: UsuarioService
         // Crear usuario (registro)
         post {
             val createDto = call.receive<UsuarioCreateUpdateDTO>()
-            val usuarioCreado = authService.register(createDto)
+            val hashedPassword = authService.hashPassword(createDto.password)
+            val usuarioCreado = usuarioService.crear(createDto, hashedPassword)
             call.respond(HttpStatusCode.Created, usuarioCreado)
         }
 
@@ -73,3 +74,5 @@ fun Route.usuarioRoutes(authService: AuthService, usuarioService: UsuarioService
         }
     }
 }
+
+

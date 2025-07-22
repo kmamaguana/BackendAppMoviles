@@ -5,6 +5,7 @@ import com.example.domain.repository.UsuarioRepository
 import com.example.dto.*
 import com.example.dto.auth.LoginRequestDTO
 import com.example.dto.auth.LoginResponseDTO
+import com.example.dto.auth.RegisterRequestDTO
 import com.example.db.Usuarios
 import io.ktor.server.config.*
 import org.jetbrains.exposed.sql.select
@@ -13,6 +14,7 @@ import org.jetbrains.exposed.sql.update
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import java.util.*
+import com.typesafe.config.ConfigFactory
 
 class AuthService(
     private val repository: UsuarioRepository,
@@ -28,9 +30,18 @@ class AuthService(
         BCrypt.verifyer().verify(password.toCharArray(), hashed).verified
 
     // Registra un nuevo usuario
-    fun register(dto: UsuarioCreateUpdateDTO): UsuarioDTO {
+    fun register(dto: RegisterRequestDTO): UsuarioDTO {
         val hashedPassword = hashPassword(dto.password)
-        return repository.save(dto, hashedPassword)
+        val usuarioCreateUpdateDTO = UsuarioCreateUpdateDTO(
+            nombre = dto.nombre,
+            apellido = dto.apellido,
+            email = dto.email,
+            password = dto.password,
+            rol = dto.rol,
+            estado = "ACTIVO",
+            fechaNacimiento = dto.fechaNacimiento
+        )
+        return repository.save(usuarioCreateUpdateDTO, hashedPassword)
     }
 
     // Inicia sesión: verifica email y contraseña, genera JWT
@@ -69,9 +80,10 @@ class AuthService(
 
     // Genera el token JWT con los datos del usuario
     private fun generateToken(usuario: UsuarioDTO): String {
-        val jwtSecret = config.property("jwt.secret").getString()
-        val issuer = config.property("jwt.issuer").getString()
-        val audience = config.property("jwt.audience").getString()
+        val config = ConfigFactory.load()
+        val jwtSecret = config.getString("jwt.secret")
+        val issuer = config.getString("jwt.issuer")
+        val audience = config.getString("jwt.audience")
 
         val algorithm = Algorithm.HMAC256(jwtSecret)
 
