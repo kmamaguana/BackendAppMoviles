@@ -1,6 +1,9 @@
 package com.example.repository.impl
 
 import com.example.db.Citas
+import com.example.db.Mascotas
+import com.example.db.Clientes
+import com.example.db.Usuarios
 import com.example.domain.repository.CitaRepository
 import com.example.dto.CitaDTO
 import com.example.dto.CitaCreateUpdateDTO
@@ -11,13 +14,24 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 class CitaRepositoryImpl : CitaRepository {
     override fun findAll(): List<CitaDTO> = transaction {
-        Citas.selectAll().map { it.toCitaDTO() }
+        (Citas innerJoin Mascotas innerJoin Clientes innerJoin Usuarios)
+            .selectAll()
+            .map {
+                val nombreMascota = it[Mascotas.nombre]
+                val nombreCliente = it[Usuarios.nombre]
+                it.toCitaDTO(nombreMascota, nombreCliente)
+            }
     }
 
     override fun findById(id: String): CitaDTO? = transaction {
         val intId = id.toIntOrNull() ?: return@transaction null
-        Citas.select { Citas.id eq intId }
-            .map { it.toCitaDTO() }
+        (Citas innerJoin Mascotas innerJoin Clientes innerJoin Usuarios)
+            .select { Citas.id     eq intId }
+            .map {
+                val nombreMascota = it[Mascotas.nombre]
+                val nombreCliente = it[Usuarios.nombre]
+                it.toCitaDTO(nombreMascota, nombreCliente)
+            }
             .singleOrNull()
     }
 

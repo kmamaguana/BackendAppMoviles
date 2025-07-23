@@ -25,6 +25,15 @@ fun Route.clienteRoutes(clienteService: ClienteService) {
             val creado = clienteService.crear(dto)
             call.respond(HttpStatusCode.Created, creado)
         }
+        post("/login") {
+            val loginDto = call.receive<com.example.dto.ClienteLoginRequestDTO>()
+            val loginResponse = clienteService.loginCliente(loginDto)
+            if (loginResponse != null) {
+                call.respond(loginResponse)
+            } else {
+                call.respond(HttpStatusCode.Unauthorized, "Email o contraseña incorrectos")
+            }
+        }
         put("/{id}") {
             val id = call.parameters["id"] ?: return@put call.respond(HttpStatusCode.BadRequest, "Falta id")
             val dto = call.receive<ClienteCreateUpdateDTO>()

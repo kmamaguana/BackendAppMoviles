@@ -9,4 +9,5 @@ interface MascotaRepository {
     fun save(dto: MascotaCreateUpdateDTO): MascotaDTO
     fun update(id: String, dto: MascotaCreateUpdateDTO): MascotaDTO?
     fun deleteById(id: String): Boolean
+    fun findByClienteId(clienteId: String): List<MascotaDTO>
 } 

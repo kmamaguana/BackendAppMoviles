@@ -13,4 +13,5 @@ class MascotaService(
     fun crear(dto: MascotaCreateUpdateDTO): MascotaDTO = repository.save(dto)
     fun actualizar(id: String, dto: MascotaCreateUpdateDTO): MascotaDTO? = repository.update(id, dto)
     fun eliminar(id: String): Boolean = repository.deleteById(id)
+    fun obtenerPorClienteId(clienteId: String): List<MascotaDTO> = repository.findByClienteId(clienteId)
 } 

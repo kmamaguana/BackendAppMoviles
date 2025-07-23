@@ -15,10 +15,12 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import java.util.*
 import com.typesafe.config.ConfigFactory
+import com.example.services.ClienteService
 
 class AuthService(
     private val repository: UsuarioRepository,
-    private val config: ApplicationConfig
+    private val config: ApplicationConfig,
+    private val clienteService: ClienteService = ClienteService() // inyectar servicio de cliente
 ) {
 
     // Hashea la contraseña usando bcrypt
@@ -32,16 +34,28 @@ class AuthService(
     // Registra un nuevo usuario
     fun register(dto: RegisterRequestDTO): UsuarioDTO {
         val hashedPassword = hashPassword(dto.password)
+        val rol = if (dto.email.endsWith("@admin")) "ADMIN" else "CLIENTE"
         val usuarioCreateUpdateDTO = UsuarioCreateUpdateDTO(
             nombre = dto.nombre,
             apellido = dto.apellido,
             email = dto.email,
             password = dto.password,
-            rol = dto.rol,
+            rol = rol,
             estado = "ACTIVO",
             fechaNacimiento = dto.fechaNacimiento
         )
-        return repository.save(usuarioCreateUpdateDTO, hashedPassword)
+        val usuario = repository.save(usuarioCreateUpdateDTO, hashedPassword)
+        // Si es cliente, crear registro en la tabla clientes
+        if (rol == "CLIENTE") {
+            clienteService.crear(
+                com.example.dto.ClienteCreateUpdateDTO(
+                    usuarioId = usuario.id,
+                    telefono = "",
+                    direccion = ""
+                )
+            )
+        }
+        return usuario
     }
 
     // Inicia sesión: verifica email y contraseña, genera JWT

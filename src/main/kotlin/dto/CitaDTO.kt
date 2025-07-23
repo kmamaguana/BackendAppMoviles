@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 data class CitaDTO(
     val id: String,
     val mascotaId: String,
+    val nombreMascota: String,
+    val nombreCliente: String,
     val fecha: String,
     val estado: String,
     val notas: String?,
