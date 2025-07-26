@@ -20,7 +20,7 @@ fun Route.mascotaRoutes(mascotaService: MascotaService) {
             if (mascota != null) call.respond(mascota)
             else call.respond(HttpStatusCode.NotFound, "No encontrado")
         }
-        get("/cliente/{clienteId}") {
+        get("/clientes/{clienteId}") {
             val clienteId = call.parameters["clienteId"] ?: return@get call.respond(HttpStatusCode.BadRequest, "Falta clienteId")
             val mascotas = mascotaService.obtenerPorClienteId(clienteId)
             call.respond(mascotas)

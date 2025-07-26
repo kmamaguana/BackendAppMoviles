@@ -1,6 +1,7 @@
 package com.example.routes
 
-import com.example.dto.*
+import com.example.dto.UsuarioDTO
+import com.example.dto.UsuarioCreateUpdateDTO
 import com.example.dto.auth.LoginRequestDTO
 import com.example.services.AuthService
 import com.example.services.UsuarioService

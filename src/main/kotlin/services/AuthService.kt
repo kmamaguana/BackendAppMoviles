@@ -5,6 +5,7 @@ import com.example.domain.repository.UsuarioRepository
 import com.example.dto.*
 import com.example.dto.auth.LoginRequestDTO
 import com.example.dto.auth.LoginResponseDTO
+import com.example.dto.UsuarioDTO
 import com.example.dto.auth.RegisterRequestDTO
 import com.example.db.Usuarios
 import io.ktor.server.config.*

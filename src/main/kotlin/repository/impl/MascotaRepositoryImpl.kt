@@ -21,7 +21,7 @@ class MascotaRepositoryImpl : MascotaRepository {
             .singleOrNull()
     }
 
-    fun findByClienteId(clienteId: String): List<MascotaDTO> = transaction {
+    override fun findByClienteId(clienteId: String): List<MascotaDTO> = transaction {
         val intClienteId = clienteId.toIntOrNull() ?: return@transaction emptyList()
         Mascotas.select { Mascotas.clienteId eq intClienteId }
             .map { it.toMascotaDTO() }
