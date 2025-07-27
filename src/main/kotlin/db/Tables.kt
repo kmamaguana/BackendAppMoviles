@@ -27,6 +27,7 @@ object Clientes : IntIdTable("clientes") {
     val usuarioId = reference("usuario_id", Usuarios)
     val telefono = varchar("telefono", 20)
     val direccion = varchar("direccion", 255)
+    val activo = bool("activo").default(true) // Para soft delete
 }
 
 object Mascotas : IntIdTable("mascotas") {

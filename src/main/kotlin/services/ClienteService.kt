@@ -13,7 +13,25 @@ import com.example.repository.impl.ClienteRepositoryImpl
 class ClienteService(
     private val repository: ClienteRepository = ClienteRepositoryImpl()
 ) {
-    fun obtenerTodos(): List<ClienteDTO> = repository.findAll()
+    fun obtenerTodos(): List<ClienteDTO> {
+        println("🚀 ClienteService.obtenerTodos() llamado")
+        val clientes = repository.findAll()
+        println("📦 ClienteService: ${clientes.size} clientes obtenidos del repositorio")
+        
+        // Log detallado de cada cliente
+        clientes.forEach { cliente ->
+            println("📋 Cliente en servicio:")
+            println("  - ID: ${cliente.id}")
+            println("  - Usuario ID: ${cliente.usuarioId}")
+            println("  - Nombre: '${cliente.nombre}'")
+            println("  - Teléfono: '${cliente.telefono}' (longitud: ${cliente.telefono.length})")
+            println("  - Dirección: '${cliente.direccion}' (longitud: ${cliente.direccion.length})")
+            println("  - Activo: ${cliente.activo}")
+            println()
+        }
+        
+        return clientes
+    }
     fun obtenerPorId(id: String): ClienteDTO? = repository.findById(id)
     fun crear(dto: ClienteCreateUpdateDTO): ClienteDTO = repository.save(dto)
     fun actualizar(id: String, dto: ClienteCreateUpdateDTO): ClienteDTO? = repository.update(id, dto)

@@ -8,6 +8,7 @@ import com.example.dto.auth.LoginResponseDTO
 import com.example.dto.UsuarioDTO
 import com.example.dto.auth.RegisterRequestDTO
 import com.example.db.Usuarios
+import com.example.utils.EmailValidator
 import io.ktor.server.config.*
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -21,7 +22,7 @@ import com.example.services.ClienteService
 class AuthService(
     private val repository: UsuarioRepository,
     private val config: ApplicationConfig,
-    private val clienteService: ClienteService = ClienteService() // inyectar servicio de cliente
+    private val clienteService: ClienteService = ClienteService()    // inyectar servicio de cliente
 ) {
 
     // Hashea la contraseña usando bcrypt
@@ -35,7 +36,15 @@ class AuthService(
     // Registra un nuevo usuario
     fun register(dto: RegisterRequestDTO): UsuarioDTO {
         val hashedPassword = hashPassword(dto.password)
-        val rol = if (dto.email.endsWith("@admin")) "ADMIN" else "CLIENTE"
+        
+        // Usar el rol que viene del frontend, o determinar automáticamente si no viene
+        val rol = if (dto.rol.isNotEmpty() && dto.rol != "CLIENTE") {
+            dto.rol // Usar el rol enviado desde el frontend
+        } else {
+            // Lógica de respaldo: usar EmailValidator para determinar el rol
+            EmailValidator.determinarRol(dto.email)
+        }
+        
         val usuarioCreateUpdateDTO = UsuarioCreateUpdateDTO(
             nombre = dto.nombre,
             apellido = dto.apellido,
