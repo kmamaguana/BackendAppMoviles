@@ -6,7 +6,7 @@ fun connectToDatabase() {
     val jdbcUrl = "jdbc:postgresql://localhost:5432/vetapp"
     val driver = "org.postgresql.Driver"
     val user = "postgres"
-    val password = "andy"
+    val password = "12345"
 
     Database.connect(jdbcUrl, driver, user, password)
 }

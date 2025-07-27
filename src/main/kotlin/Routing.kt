@@ -5,19 +5,28 @@ import com.example.repository.impl.UsuarioRepositoryImpl
 import com.example.repository.impl.*
 import com.example.routes.*
 import com.example.services.*
+import com.example.routes.chatBotRoutes
+import com.example.services.GeminiService
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.github.cdimascio.dotenv.dotenv
 
 fun Application.configureRouting() {
+    // Cargar API Key de Gemini desde .env o variable de entorno
+    val dotenv = dotenv()
+    val geminiApiKey = dotenv["GEMINI_API_KEY"] ?: System.getenv("GEMINI_API_KEY")
+
+    // Crear instancia de GeminiService
+    val geminiService = GeminiService(geminiApiKey)
+
     val usuarioRepository = UsuarioRepositoryImpl()
     val usuarioService = UsuarioService(usuarioRepository)
     val authService = AuthService(usuarioRepository, environment.config)
 
-    // Instancias de servicios para los nuevos módulos
     val reseteoContrasenaService = ReseteoContrasenaService()
-    val ClienteRepository = ClienteRepositoryImpl()
-    val clienteService = ClienteService(ClienteRepository)
+    val clienteRepository = ClienteRepositoryImpl()
+    val clienteService = ClienteService(clienteRepository)
     val mascotaService = MascotaService()
     val servicioService = ServicioService()
     val citaService = CitaService()
@@ -39,8 +48,6 @@ fun Application.configureRouting() {
 
         authRoutes(authService)
         usuarioRoutes(authService, usuarioService)
-
-        // Rutas de los nuevos módulos
         reseteoContrasenaRoutes(reseteoContrasenaService)
         clienteRoutes(clienteService)
         mascotaRoutes(mascotaService)
@@ -57,9 +64,11 @@ fun Application.configureRouting() {
         historialClienteRoutes(historialClienteService)
         nivelFidelidadRoutes(nivelFidelidadService)
 
+        // ✅ Ruta del chatbot usando instancia de GeminiService
+        chatBotRoutes(geminiService)
+
         get("/auth/test") {
             call.respondText("Ruta auth funciona")
         }
     }
 }
-
