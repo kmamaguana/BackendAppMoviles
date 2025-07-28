@@ -13,9 +13,9 @@ jobs:
       - name: 🔄 Checkout código fuente
         uses: actions/checkout@v4
 
-      - name: 🔐 Crear archivo .env
+      - name: 🔐 Crear archivo .env local
         run: |
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
           echo "DB_URL=${{ secrets.DB_URL }}" >> .env
           echo "DB_DRIVER=${{ secrets.DB_DRIVER }}" >> .env
           echo "DB_USER=${{ secrets.DB_USER }}" >> .env
@@ -24,10 +24,10 @@ jobs:
       - name: 🐳 Construir imagen Docker
         run: docker build -t ktor-app .
 
-      - name: 📦 Guardar imagen Docker
+      - name: 📦 Guardar imagen Docker en archivo comprimido
         run: docker save ktor-app | gzip > ktor-app.tar.gz
 
-      - name: 📡 Preparar entorno en EC2
+      - name: 📡 Preparar entorno en EC2 y limpiar previos
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
@@ -40,6 +40,7 @@ jobs:
               sudo apt update -y
               sudo apt install -y docker.io
               sudo systemctl start docker
+              sudo systemctl enable docker
             fi
 
             echo "🧹 Limpiando contenedor e imagen anteriores..."
@@ -48,7 +49,7 @@ jobs:
             rm -f ~/ktor-app.tar.gz
             rm -f ~/.env
 
-      - name: Subir archivos a EC2
+      - name: 📤 Subir imagen Docker comprimida a EC2
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
@@ -60,8 +61,7 @@ jobs:
           timeout: 30s
           command_timeout: 10m
 
-
-      - name: Crear y ejecutar contenedor en EC2
+      - name: 🚀 Crear archivo .env remoto, cargar imagen y ejecutar contenedor
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
@@ -70,16 +70,18 @@ jobs:
           port: 22
           script: |
             cd ~
-            echo "${{ secrets.GEMINI_API_KEY }}" > .env
+            echo "Creando archivo .env remoto..."
+            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
             echo "DB_URL=${{ secrets.DB_URL }}" >> .env
             echo "DB_DRIVER=${{ secrets.DB_DRIVER }}" >> .env
             echo "DB_USER=${{ secrets.DB_USER }}" >> .env
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
             
-            echo "📦 Cargando imagen Docker..."
+            echo "📦 Cargando imagen Docker desde archivo..."
             sudo docker load < ktor-app.tar.gz
             
-            echo "🚀 Ejecutando contenedor..."
+            echo "🧹 Eliminando contenedor previo si existe..."
             sudo docker rm -f ktor-app || true
+            
+            echo "🚀 Ejecutando contenedor Ktor..."
             sudo docker run -d --name ktor-app --env-file .env -p 8089:8089 ktor-app
-
