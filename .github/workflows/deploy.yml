@@ -61,17 +61,25 @@ jobs:
           command_timeout: 10m
 
 
-      - name: 🛠️ Iniciar contenedor en EC2
+      - name: Crear y ejecutar contenedor en EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
-          host: ${{ secrets.EC2_HOST_FRONT }}
-          username: ${{ secrets.EC2_USER_FRONT }}
-          key: ${{ secrets.EC2_SSH_KEY_FRONT }}
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
           port: 22
           script: |
             cd ~
+            echo "${{ secrets.GEMINI_API_KEY }}" > .env
+            echo "DB_URL=${{ secrets.DB_URL }}" >> .env
+            echo "DB_DRIVER=${{ secrets.DB_DRIVER }}" >> .env
+            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            
             echo "📦 Cargando imagen Docker..."
             sudo docker load < ktor-app.tar.gz
-
+            
             echo "🚀 Ejecutando contenedor..."
+            sudo docker rm -f ktor-app || true
             sudo docker run -d --name ktor-app --env-file .env -p 8089:8089 ktor-app
+
