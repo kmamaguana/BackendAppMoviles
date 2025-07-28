@@ -64,9 +64,9 @@ jobs:
       - name: Crear y ejecutar contenedor en EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_KEY }}
+          host: ${{ secrets.EC2_HOST_FRONT }}
+          username: ${{ secrets.EC2_USER_FRONT }}
+          key: ${{ secrets.EC2_SSH_KEY_FRONT }}
           port: 22
           script: |
             cd ~
