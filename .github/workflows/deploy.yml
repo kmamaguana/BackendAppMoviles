@@ -1,4 +1,4 @@
-name: Build and Deploy Ktor App to EC2
+name: Deploy Ktor App to EC2
 
 on:
   push:
@@ -6,33 +6,28 @@ on:
       - dev-erick
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Clonar repositorio
-        uses: actions/checkout@v3
+      - name: 🔄 Checkout código fuente
+        uses: actions/checkout@v4
 
-      - name: ⚙️ Validar variables obligatorias
+      - name: 🔐 Cargar variables de entorno
         run: |
-          if [ -z "${{ secrets.EC2_HOST_FRONT }}" ] || [ -z "${{ secrets.EC2_USER_FRONT }}" ] || [ -z "${{ secrets.EC2_SSH_KEY_FRONT }}" ]; then
-            echo "❌ Faltan variables obligatorias de conexión a EC2."
-            exit 1
-          fi
-
-      - name: 🗂️ Crear archivo .env para el backend
-        run: |
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
           echo "DB_URL=${{ secrets.DB_URL }}" >> .env
           echo "DB_DRIVER=${{ secrets.DB_DRIVER }}" >> .env
           echo "DB_USER=${{ secrets.DB_USER }}" >> .env
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
 
-      - name: 📦 Comprimir proyecto
-        run: |
-          zip -r ktor-app.zip . -x "*.git*" "*.idea*" "*build*" "*out*" "*.gradle*" "*.iml" "*.DS_Store"
+      - name: 🐳 Construir imagen Docker
+        run: docker build -t ktor-app .
 
-      - name: 🚀 Preparar entorno en EC2 (Docker y carpeta)
+      - name: 📦 Guardar imagen Docker
+        run: docker save ktor-app | gzip > ktor-app.tar.gz
+
+      - name: 📡 Deploy to EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
@@ -40,25 +35,24 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
           port: 22
           script: |
-            sudo apt-get update -y
-            sudo apt-get install -y docker.io unzip
+            sudo yum update -y
+            sudo yum install -y docker
             sudo systemctl start docker
-            sudo systemctl enable docker
-            sudo usermod -aG docker $USER || true
-            rm -rf ~/ktor-app
-            mkdir -p ~/ktor-app
+            sudo docker stop ktor-app || true
+            sudo docker rm ktor-app || true
+            rm -f ktor-app.tar.gz
 
-      - name: 📤 Subir proyecto a EC2
+      - name: 🚀 Transfer Docker Image a EC2
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
           username: ${{ secrets.EC2_USER_FRONT }}
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
           port: 22
-          source: "ktor-app.zip"
-          target: "/home/${{ secrets.EC2_USER_FRONT }}/ktor-app"
+          source: "ktor-app.tar.gz"
+          target: "/home/${{ secrets.EC2_USER_FRONT }}"
 
-      - name: 🔧 Descomprimir, construir y ejecutar en EC2
+      - name: 🛠️ Iniciar contenedor en EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
@@ -66,36 +60,5 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
           port: 22
           script: |
-            cd ~/ktor-app
-            unzip -o ktor-app.zip
-            rm ktor-app.zip
-
-            echo "🧪 Validando Dockerfile..."
-            if [ ! -f "Dockerfile" ]; then
-              echo "❌ No se encontró el Dockerfile. Abortando..."
-              exit 1
-            fi
-
-            echo "🧪 Creando archivo .env"
-            cat > .env <<EOL
-            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-            DB_URL=${{ secrets.DB_URL }}
-            DB_DRIVER=${{ secrets.DB_DRIVER }}
-            DB_USER=${{ secrets.DB_USER }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            EOL
-
-            echo "🧼 Deteniendo contenedor anterior si existe..."
-            docker stop ktor-app || true
-            docker rm ktor-app || true
-
-            echo "🔨 Construyendo imagen Docker..."
-            docker build -t ktor-app . || { echo '❌ Falló el build de Docker.'; exit 1; }
-
-            echo "🧾 Verificando imágenes..."
-            docker images
-
-            echo "🚀 Ejecutando contenedor"
-            docker run -d --name ktor-app --env-file .env -p 8080:8080 ktor-app || { echo '❌ Falló al ejecutar el contenedor.'; exit 1; }
-
-            echo "✅ Despliegue completado correctamente"
+            docker load < ktor-app.tar.gz
+            docker run -d --name ktor-app --env-file .env -p 8089:8089 ktor-app
