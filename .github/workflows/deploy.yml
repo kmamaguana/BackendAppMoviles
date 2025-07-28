@@ -30,7 +30,7 @@ jobs:
 
       - name: 📦 Comprimir proyecto
         run: |
-          zip -r ktor-app.zip . -x "*.git*" "*.idea*" "*build*" "*out*" "*.gradle*" "*.iml" "*.DS_Store"
+          zip -r ktor-app.zip . -x "*.git*" "*.idea*" "*build/*" "*out/*" "*.gradle/*" "*.iml" "*.DS_Store"
 
       - name: 🚀 Instalar Docker y preparar entorno en EC2
         uses: appleboy/ssh-action@v0.1.6
@@ -40,18 +40,18 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
           port: 22
           script: |
-            echo "🔧 Instalando Docker y unzip con apt..."
+            echo "🔧 Instalando Docker y unzip..."
             sudo apt-get update -y
             sudo apt-get install -y docker.io unzip
             sudo systemctl start docker
             sudo systemctl enable docker
             sudo usermod -aG docker $USER || true
-
-            echo "📂 Creando carpeta del proyecto"
+            
+            echo "📁 Preparando carpeta del proyecto"
             rm -rf ~/ktor-app
             mkdir -p ~/ktor-app
 
-      - name: 📤 Subir proyecto a EC2
+      - name: 📤 Subir proyecto comprimido a EC2
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
@@ -61,7 +61,7 @@ jobs:
           source: "ktor-app.zip"
           target: "/home/${{ secrets.EC2_USER_FRONT }}/ktor-app"
 
-      - name: 🔧 Descomprimir, construir y ejecutar en EC2
+      - name: 🔧 Descomprimir, construir imagen y ejecutar contenedor en EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
@@ -69,17 +69,19 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
           port: 22
           script: |
-            sudo apt-get update -y
-            sudo apt-get install -y unzip docker.io
-            sudo systemctl start docker
-            sudo systemctl enable docker
-
+            echo "📂 Ingresando al directorio del proyecto"
             cd ~/ktor-app
             unzip -o ktor-app.zip
+            
+            echo "🧪 Verificando archivos Gradle..."
+            if [ ! -f "build.gradle.kts" ] && [ ! -f "build.gradle" ]; then
+              echo "❌ No se encontró archivo Gradle. Abortando."
+              exit 1
+            fi
 
             echo "🧪 Validando Dockerfile..."
             if [ ! -f "Dockerfile" ]; then
-              echo "❌ No se encontró el Dockerfile. Aborting."
+              echo "❌ No se encontró el Dockerfile. Abortando."
               exit 1
             fi
 
@@ -91,15 +93,16 @@ jobs:
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             EOL
-            
-            echo "🧼 Deteniendo contenedor anterior si existe..."
+
+            echo "🧼 Limpiando contenedor e imagen anteriores..."
             docker stop ktor-app || true
             docker rm ktor-app || true
-            
+            docker rmi ktor-app || true
+
             echo "🔨 Construyendo imagen Docker..."
             docker build -t ktor-app .
-            
+
             echo "🚀 Ejecutando contenedor"
-            docker run -d --name ktor-app --env-file .env -p 8080:8080 ktor-app
-            
-            echo "✅ Despliegue completado correctamente"
+            docker run -d --name ktor-app --env-file .env -p 8089:8089 ktor-app
+
+            echo "✅ Despliegue exitoso"
