@@ -40,16 +40,19 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
           port: 22
           script: |
-            echo "🔧 Verificando e instalando Docker..."
+            echo "🔧 Verificando e instalando Docker y unzip..."
             if ! command -v docker &> /dev/null; then
               sudo yum update -y
-              sudo yum install -y docker
+              sudo yum install -y docker unzip
               sudo service docker start
               sudo usermod -aG docker $USER
             else
               echo "✅ Docker ya está instalado"
             fi
-            
+            if ! command -v unzip &> /dev/null; then
+              sudo yum install -y unzip
+            fi
+
             echo "📂 Creando carpeta del proyecto"
             rm -rf ~/ktor-app
             mkdir -p ~/ktor-app
