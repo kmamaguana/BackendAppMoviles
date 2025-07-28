@@ -35,8 +35,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
           port: 22
           script: |
-            sudo yum update -y
-            sudo yum install -y docker
+            sudo apt update -y
+            sudo apt install -y docker.io
             sudo systemctl start docker
             sudo docker stop ktor-app || true
             sudo docker rm ktor-app || true
@@ -60,5 +60,5 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
           port: 22
           script: |
-            docker load < ktor-app.tar.gz
-            docker run -d --name ktor-app --env-file .env -p 8089:8089 ktor-app
+            sudo docker load < ktor-app.tar.gz
+            sudo docker run -d --name ktor-app --env-file .env -p 8089:8089 ktor-app
