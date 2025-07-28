@@ -13,7 +13,7 @@ jobs:
       - name: 🔄 Checkout código fuente
         uses: actions/checkout@v4
 
-      - name: 🔐 Cargar variables de entorno
+      - name: 🔐 Crear archivo .env
         run: |
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
           echo "DB_URL=${{ secrets.DB_URL }}" >> .env
@@ -27,7 +27,7 @@ jobs:
       - name: 📦 Guardar imagen Docker
         run: docker save ktor-app | gzip > ktor-app.tar.gz
 
-      - name: 📡 Deploy to EC2
+      - name: 📡 Preparar entorno en EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
@@ -35,22 +35,30 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
           port: 22
           script: |
-            sudo apt update -y
-            sudo apt install -y docker.io
-            sudo systemctl start docker
+            echo "🔧 Instalando Docker si no está presente..."
+            if ! command -v docker &> /dev/null; then
+              sudo apt update -y
+              sudo apt install -y docker.io
+              sudo systemctl start docker
+            fi
+
+            echo "🧹 Limpiando contenedor e imagen anteriores..."
             sudo docker stop ktor-app || true
             sudo docker rm ktor-app || true
-            rm -f ktor-app.tar.gz
+            rm -f ~/ktor-app.tar.gz
+            rm -f ~/.env
 
-      - name: 🚀 Transfer Docker Image a EC2
+      - name: 📤 Subir archivos a EC2
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
           username: ${{ secrets.EC2_USER_FRONT }}
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
           port: 22
-          source: "ktor-app.tar.gz"
-          target: "/home/${{ secrets.EC2_USER_FRONT }}"
+          source: |
+            ktor-app.tar.gz
+            .env
+          target: "/home/${{ secrets.EC2_USER_FRONT }}/"
 
       - name: 🛠️ Iniciar contenedor en EC2
         uses: appleboy/ssh-action@v0.1.6
@@ -60,5 +68,9 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
           port: 22
           script: |
+            cd ~
+            echo "📦 Cargando imagen Docker..."
             sudo docker load < ktor-app.tar.gz
+
+            echo "🚀 Ejecutando contenedor..."
             sudo docker run -d --name ktor-app --env-file .env -p 8089:8089 ktor-app
