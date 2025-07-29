@@ -2,7 +2,6 @@ package com.example
 
 import com.example.repository.impl.ClienteRepositoryImpl
 import com.example.repository.impl.UsuarioRepositoryImpl
-import com.example.repository.impl.*
 import com.example.routes.*
 import com.example.services.*
 import com.example.routes.chatBotRoutes
@@ -46,6 +45,7 @@ fun Application.configureRouting() {
             call.respondText("Hello World!")
         }
 
+        chatBotRoutes(geminiService)
         authRoutes(authService)
         usuarioRoutes(authService, usuarioService)
         reseteoContrasenaRoutes(reseteoContrasenaService)

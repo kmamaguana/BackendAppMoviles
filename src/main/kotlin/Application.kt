@@ -76,10 +76,7 @@ fun Application.module() {
         allowMethod(HttpMethod.Delete)
     }
 
-    // Definir rutas
-    routing {
-        chatBotRoutes(geminiService)  // ← Rutas relacionadas al chatbot
-    }
+    configureRouting()
 
     // Inicializar base de datos y crear tablas si no existen
     connectToDatabase()
