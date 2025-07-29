@@ -13,75 +13,46 @@ jobs:
       - name: 🔄 Checkout código fuente
         uses: actions/checkout@v4
 
-      - name: 🔐 Crear archivo .env local
-        run: |
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
-          echo "DB_URL=${{ secrets.DB_URL }}" >> .env
-          echo "DB_DRIVER=${{ secrets.DB_DRIVER }}" >> .env
-          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-
       - name: 🐳 Construir imagen Docker
         run: docker build -t ktor-app .
 
-      - name: 📦 Guardar imagen Docker en archivo comprimido
+      - name: 📦 Guardar imagen como archivo comprimido
         run: docker save ktor-app | gzip > ktor-app.tar.gz
 
-      - name: 📡 Preparar entorno en EC2 y limpiar previos
+      - name: 📡 Preparar entorno remoto
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
           username: ${{ secrets.EC2_USER_FRONT }}
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
-          port: 22
           script: |
-            echo "🔧 Instalando Docker si no está presente..."
-            if ! command -v docker &> /dev/null; then
-              sudo apt update -y
-              sudo apt install -y docker.io
-              sudo systemctl start docker
-              sudo systemctl enable docker
-            fi
-
-            echo "🧹 Limpiando contenedor e imagen anteriores..."
+            sudo apt update -y && sudo apt install -y docker.io
             sudo docker stop ktor-app || true
             sudo docker rm ktor-app || true
-            rm -f ~/ktor-app.tar.gz
-            rm -f ~/.env
+            rm -f ~/ktor-app.tar.gz .env
 
-      - name: 📤 Subir imagen Docker comprimida a EC2
+      - name: 📤 Subir imagen Docker
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
           username: ${{ secrets.EC2_USER_FRONT }}
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
-          port: 22
           source: ktor-app.tar.gz
-          target: /home/${{ secrets.EC2_USER_FRONT }}/
-          timeout: 30s
-          command_timeout: 10m
+          target: ~/
 
-      - name: 🚀 Crear archivo .env remoto, cargar imagen y ejecutar contenedor
+      - name: 🚀 Ejecutar contenedor en EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST_FRONT }}
           username: ${{ secrets.EC2_USER_FRONT }}
           key: ${{ secrets.EC2_SSH_KEY_FRONT }}
-          port: 22
           script: |
             cd ~
-            echo "Creando archivo .env remoto..."
             echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
             echo "DB_URL=${{ secrets.DB_URL }}" >> .env
             echo "DB_DRIVER=${{ secrets.DB_DRIVER }}" >> .env
             echo "DB_USER=${{ secrets.DB_USER }}" >> .env
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-            
-            echo "📦 Cargando imagen Docker desde archivo..."
+
             sudo docker load < ktor-app.tar.gz
-            
-            echo "🧹 Eliminando contenedor previo si existe..."
-            sudo docker rm -f ktor-app || true
-            
-            echo "🚀 Ejecutando contenedor Ktor..."
             sudo docker run -d --name ktor-app --env-file .env -p 8089:8089 ktor-app
